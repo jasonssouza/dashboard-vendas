@@ -7,6 +7,12 @@ const PORT = process.env.PORT || 3000;
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 min
 const cache = new Map();
 
+const REQUIRED_ENV = ['DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'];
+const missingEnv = REQUIRED_ENV.filter(k => !process.env[k]);
+if (missingEnv.length) {
+  console.warn('Variáveis de ambiente ausentes:', missingEnv.join(', '));
+}
+
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
   port: Number(process.env.DB_PORT) || 3306,
@@ -72,13 +78,16 @@ app.get('/api/vendas', async (req, res) => {
   if (cached && cached.expiresAt > Date.now()) {
     return res.json(cached.data);
   }
+  if (missingEnv.length) {
+    return res.status(500).json({ error: 'Variáveis de ambiente ausentes: ' + missingEnv.join(', ') });
+  }
   try {
     const data = await fetchVendasData(lastN);
     cache.set(cacheKey, { data, expiresAt: Date.now() + CACHE_TTL_MS });
     res.json(data);
   } catch (err) {
-    console.error('Erro ao consultar Thonus:', err.message);
-    res.status(500).json({ error: 'Falha ao consultar o banco de dados.' });
+    console.error('Erro ao consultar Thonus:', err.code || '(sem código)', '-', err.message);
+    res.status(500).json({ error: (err.code || 'ERRO') + ': ' + err.message });
   }
 });
 
