@@ -28,6 +28,23 @@ function formatDate(d) {
   return dt.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
 }
 
+function cumulativeSeries(raw, keyFn, dateIndex, axisLen) {
+  const byKey = new Map();
+  for (const r of raw) {
+    const key = keyFn(r);
+    if (!byKey.has(key)) byKey.set(key, new Array(axisLen).fill(0));
+    byKey.get(key)[dateIndex.get(r.data.getTime())] += Number(r.sacaria) || 0;
+  }
+  const result = new Map();
+  for (const [key, daily] of byKey) {
+    const cumulative = [];
+    let acc = 0;
+    for (const v of daily) { acc += v; cumulative.push(acc); }
+    result.set(key, cumulative);
+  }
+  return result;
+}
+
 async function fetchVendasData(lastN) {
   const [[safraRow]] = await pool.query(
     `SELECT safra FROM vw_bi_cambai WHERE safra IS NOT NULL GROUP BY safra ORDER BY MAX(data) DESC LIMIT 1`
@@ -46,26 +63,46 @@ async function fetchVendasData(lastN) {
 
   const dateAxis = [...new Set(raw.map(r => r.data.getTime()))].sort((a, b) => a - b);
   const dateIndex = new Map(dateAxis.map((t, i) => [t, i]));
+  const vendorSeries = cumulativeSeries(raw, r => r.vendedor, dateIndex, dateAxis.length);
 
-  const byVendor = new Map();
-  for (const r of raw) {
-    if (!byVendor.has(r.vendedor)) byVendor.set(r.vendedor, new Array(dateAxis.length).fill(0));
-    byVendor.get(r.vendedor)[dateIndex.get(r.data.getTime())] += Number(r.sacaria) || 0;
+  const [rawCultivar] = await pool.query(
+    `SELECT vendedor, cultivar, data, SUM(sacaria) AS sacaria
+     FROM vw_bi_cambai
+     WHERE safra = ? AND vendedor IS NOT NULL AND cultivar IS NOT NULL
+     GROUP BY vendedor, cultivar, data
+     ORDER BY data ASC`,
+    [safra]
+  );
+  const cultivarDaily = new Map();
+  for (const r of rawCultivar) {
+    if (!cultivarDaily.has(r.vendedor)) cultivarDaily.set(r.vendedor, new Map());
+    const byCultivar = cultivarDaily.get(r.vendedor);
+    if (!byCultivar.has(r.cultivar)) byCultivar.set(r.cultivar, new Array(dateAxis.length).fill(0));
+    byCultivar.get(r.cultivar)[dateIndex.get(r.data.getTime())] += Number(r.sacaria) || 0;
   }
-
-  const rows = [...byVendor.entries()].map(([name, daily]) => {
-    const cumulative = [];
-    let acc = 0;
-    for (const v of daily) { acc += v; cumulative.push(acc); }
-    return { name, vals: cumulative };
-  });
+  const cultivarsByVendor = new Map();
+  for (const [vendedor, byCultivar] of cultivarDaily) {
+    const list = [...byCultivar.entries()].map(([cultivar, daily]) => {
+      const cumulative = [];
+      let acc = 0;
+      for (const v of daily) { acc += v; cumulative.push(acc); }
+      return { name: cultivar, vals: cumulative };
+    });
+    cultivarsByVendor.set(vendedor, list);
+  }
 
   const n = Math.min(lastN, dateAxis.length) || dateAxis.length;
   const sliceStart = dateAxis.length - n;
   const dates = dateAxis.slice(sliceStart).map(formatDate);
-  const slicedRows = rows.map(r => ({ name: r.name, vals: r.vals.slice(sliceStart) }));
 
-  return { dates, rows: slicedRows, safra };
+  const rows = [...vendorSeries.entries()].map(([name, vals]) => {
+    const cultivars = (cultivarsByVendor.get(name) || [])
+      .map(c => ({ name: c.name, vals: c.vals.slice(sliceStart) }))
+      .sort((a, b) => (b.vals[b.vals.length - 1] || 0) - (a.vals[a.vals.length - 1] || 0));
+    return { name, vals: vals.slice(sliceStart), cultivars };
+  });
+
+  return { dates, rows, safra };
 }
 
 const app = express();

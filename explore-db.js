@@ -35,8 +35,8 @@ async function main() {
      LIMIT 10`
   );
   console.log('\nAcumulado por data (agrupado, safra atual):');
-  console.log(JSON.stringify(totalsPerDate, null, 2));
 
+  console.log(JSON.stringify(totalsPerDate, null, 2));
   await conn.end();
 }
 
