@@ -89,13 +89,11 @@ textarea:focus{border-color:var(--accent2)}
 .top10-value{width:56px;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums;color:var(--text);font-size:10px}
 
 /* PIE */
-.pie-flex{display:flex;align-items:center;gap:10px}
-.pie-canvas-wrap{position:relative;width:170px;height:170px;flex-shrink:0}
+.pie-canvas-wrap{position:relative;width:100%;max-width:280px;height:260px;margin:0 auto}
 .pie-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;text-align:center}
-.pie-center .pc-label{font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;font-weight:700}
-.pie-center .pc-value{font-size:15px;color:var(--text);font-weight:700;margin:2px 0}
-.pie-center .pc-unit{font-size:7px;color:var(--text3);text-transform:uppercase}
-.legend-col{display:flex;flex-direction:column;gap:6px;font-size:10px;overflow-y:auto;max-height:180px;flex:1;min-width:0}
+.pie-center .pc-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;font-weight:700}
+.pie-center .pc-value{font-size:22px;color:var(--text);font-weight:700;margin:3px 0}
+.pie-center .pc-unit{font-size:9px;color:var(--text3);text-transform:uppercase}
 
 /* HEATMAP */
 table.heatmap{border-collapse:collapse;font-size:10px;width:100%}
@@ -245,12 +243,10 @@ table.cultivar-table td.name-cell{color:var(--text);font-weight:500}
       </div>
       <div class="chart-card">
         <div class="chart-title">Participação dos vendedores</div>
-        <div class="pie-flex">
-          <div class="pie-canvas-wrap">
-            <canvas id="pieChart" role="img" aria-label="Gráfico de rosca com participação percentual de cada vendedor">Gráfico de rosca indisponível — participação percentual de cada vendedor.</canvas>
-            <div class="pie-center" id="pie-center"></div>
-          </div>
-          <div id="pie-legend" class="legend-col"></div>
+        <div id="pie-legend" class="legend-row"></div>
+        <div class="pie-canvas-wrap">
+          <canvas id="pieChart" role="img" aria-label="Gráfico de rosca com participação percentual de cada vendedor">Gráfico de rosca indisponível — participação percentual de cada vendedor.</canvas>
+          <div class="pie-center" id="pie-center"></div>
         </div>
       </div>
       <div class="chart-card">
@@ -504,14 +500,17 @@ function renderCharts(ctx) {
   // TOP 10 (custom HTML ranking, not a Chart.js canvas)
   const sortedTop = [...rows].sort((a,b) => (b.vals[lastIdx]||0) - (a.vals[lastIdx]||0)).slice(0,10);
   const top1Val = sortedTop.length ? sortedTop[0].vals[lastIdx]||0 : 1;
+  const top10Min = sortedTop.length ? sortedTop[sortedTop.length-1].vals[lastIdx]||0 : 0;
+  const top10Range = top1Val - top10Min;
   document.getElementById('top10-list').innerHTML = sortedTop.map((r,i) => {
     const val = r.vals[lastIdx]||0;
     const w = top1Val ? (val/top1Val*100) : 0;
+    const t = top10Range ? (val-top10Min)/top10Range : 1;
     return `
     <div class="top10-row">
       <span class="top10-rank">${i+1}</span>
       <span class="top10-name" title="${r.name}">${r.name}</span>
-      <span class="top10-track"><span class="top10-fill" style="width:${w.toFixed(1)}%"></span></span>
+      <span class="top10-track"><span class="top10-fill" style="width:${w.toFixed(1)}%;background:${heatColor(t)}"></span></span>
       <span class="top10-value">${fmt(val)}</span>
     </div>`;
   }).join('');
