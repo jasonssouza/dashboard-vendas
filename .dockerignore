@@ -1,4 +1,8 @@
 .git
 .claude
+.env
 *.xlsx
 *.md
+node_modules
+explore-db.js
+test-db-connection.js

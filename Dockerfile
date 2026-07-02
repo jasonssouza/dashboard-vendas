@@ -1,5 +1,12 @@
-FROM nginx:alpine
+FROM node:20-alpine
 
-COPY dashboard_vendas.html /usr/share/nginx/html/index.html
+WORKDIR /app
 
-EXPOSE 80
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+COPY dashboard_vendas.html server.js ./
+
+EXPOSE 3000
+
+CMD ["node", "server.js"]
