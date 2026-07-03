@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard – Evolução das Vendas por Vendedor</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -81,12 +82,10 @@ textarea:focus{border-color:var(--accent2)}
 .legend-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
 
 /* TOP 10 */
-.top10-row{display:flex;align-items:center;gap:8px;margin-bottom:9px;font-size:11px}
-.top10-rank{width:17px;height:17px;border-radius:50%;background:var(--gold);color:#0a1526;font-weight:700;font-size:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.top10-name{width:88px;flex-shrink:0;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.top10-track{flex:1;height:12px;background:var(--surface2);border-radius:3px;overflow:hidden}
-.top10-fill{height:100%;background:var(--accent2);border-radius:3px}
-.top10-value{width:56px;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums;color:var(--text);font-size:10px}
+.top10-row{display:flex;align-items:center;gap:10px;margin-bottom:11px;font-size:12px}
+.top10-rank{width:20px;height:20px;border-radius:50%;background:var(--gold);color:#0a1526;font-weight:700;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.top10-name{flex:1;min-width:0;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top10-value{text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums;font-weight:700;font-size:12px}
 
 /* PIE */
 .pie-canvas-wrap{position:relative;width:100%;max-width:280px;height:260px;margin:0 auto}
@@ -94,12 +93,17 @@ textarea:focus{border-color:var(--accent2)}
 .pie-center .pc-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;font-weight:700}
 .pie-center .pc-value{font-size:22px;color:var(--text);font-weight:700;margin:3px 0}
 .pie-center .pc-unit{font-size:9px;color:var(--text3);text-transform:uppercase}
+.legend-item.clickable{cursor:pointer;user-select:none}
+.legend-item.clickable:hover{color:var(--text)}
+.legend-item.dimmed{opacity:.4}
 
 /* HEATMAP */
 table.heatmap{border-collapse:collapse;font-size:10px;width:100%}
 table.heatmap th{padding:5px 8px;text-align:left;color:var(--text3);white-space:nowrap;font-weight:700;text-transform:uppercase;letter-spacing:.03em;font-size:9px}
 table.heatmap td{padding:5px 8px;text-align:center;white-space:nowrap;color:#0a1526;font-weight:700;border-radius:4px}
-table.heatmap td.name-cell{text-align:left;color:var(--text);background:transparent;font-weight:500}
+table.heatmap td.name-cell{text-align:left;color:var(--text);background:var(--surface);font-weight:500}
+table.heatmap th:first-child,table.heatmap td:first-child{position:sticky;left:0;z-index:2;background:var(--surface)}
+table.heatmap th:first-child{z-index:3}
 .heatmap-legend{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:9px;color:var(--text3)}
 .heatmap-legend .grad{flex:1;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--red),var(--orange),var(--green))}
 
@@ -112,6 +116,10 @@ th.sortable:hover{color:var(--text2)}
 td{padding:8px 10px;color:var(--text);border-bottom:1px solid rgba(30,53,80,.6);white-space:nowrap;font-variant-numeric:tabular-nums}
 tr.total-row td{border-bottom:none;font-weight:700;background:var(--surface2)}
 tr:hover td{background:rgba(255,255,255,.03)}
+#data-table th:nth-child(1),#data-table td:nth-child(1){position:sticky;left:0;width:32px;background:var(--surface);z-index:2}
+#data-table th:nth-child(2),#data-table td:nth-child(2){position:sticky;left:32px;background:var(--surface);z-index:2;box-shadow:2px 0 4px rgba(0,0,0,.25)}
+#data-table th:nth-child(1),#data-table th:nth-child(2){z-index:3;background:var(--surface)}
+#data-table tr.total-row td:nth-child(1),#data-table tr.total-row td:nth-child(2){background:var(--surface2)}
 .badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500}
 .badge-up{background:rgba(27,175,122,.15);color:var(--green)}
 .badge-down{background:rgba(227,73,72,.15);color:var(--red)}
@@ -132,6 +140,9 @@ table.cultivar-table td.name-cell{color:var(--text);font-weight:500}
 /* SECTION ACTIONS */
 .section-head{display:flex;align-items:center;gap:10px;margin-bottom:1rem;flex-wrap:wrap}
 .section-head h2{font-size:15px;font-weight:600;flex:1}
+.section-head .spacer{flex:1}
+.filter-select{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-size:13px;padding:8px 12px;font-family:inherit;outline:none;cursor:pointer}
+.filter-select:focus{border-color:var(--accent2)}
 .footer-note{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--text3);margin-top:1rem}
 
 /* MODAL */
@@ -223,7 +234,11 @@ table.cultivar-table td.name-cell{color:var(--text);font-weight:500}
 
   <!-- DASHBOARD -->
   <div id="dashboard" style="display:none">
-    <div class="section-head" style="justify-content:flex-end">
+    <div class="section-head">
+      <select class="filter-select" id="vendor-filter" onchange="setVendorFilter(this.value)">
+        <option value="">Todos os vendedores</option>
+      </select>
+      <span class="spacer"></span>
       <button class="btn btn-sm btn-primary" onclick="openModal(null)">+ Adicionar vendedor</button>
       <button class="btn btn-sm" onclick="resetDash()">↺ Reiniciar</button>
     </div>
@@ -318,12 +333,30 @@ let STATE = { dates: [], rows: [] };
 let CHARTS = {};
 let sortState = null;   // { key, dir }
 let editingIndex = null; // null = adding new vendor
+let activeFilter = '';  // vendor name selected in the top filter, '' = all
+let pieHighlight = null; // vendor name isolated in the donut legend
 const expandedVendors = new Set();
+
+if (window.ChartDataLabels) Chart.register(ChartDataLabels);
 
 function toggleVendorExpand(name) {
   if (expandedVendors.has(name)) expandedVendors.delete(name);
   else expandedVendors.add(name);
   render();
+}
+
+function setVendorFilter(name) {
+  activeFilter = name;
+  render();
+}
+
+function togglePieHighlight(name) {
+  pieHighlight = pieHighlight === name ? null : name;
+  renderCharts(lastCtx, getVisibleRows());
+}
+
+function getVisibleRows() {
+  return activeFilter ? STATE.rows.filter(r => r.name === activeFilter) : STATE.rows;
 }
 
 /* ---------- format helpers ---------- */
@@ -371,6 +404,9 @@ function parseCSV(raw) {
 function showDashboard(dates, rows, updateLabel) {
   STATE = { dates, rows };
   sortState = null;
+  activeFilter = '';
+  pieHighlight = null;
+  expandedVendors.clear();
   document.getElementById('upload-section').style.display = 'none';
   document.getElementById('dashboard').style.display = '';
   document.getElementById('header-sub').textContent = updateLabel;
@@ -419,8 +455,18 @@ function heatColor(t) {
 }
 
 /* ---------- main render ---------- */
+let lastCtx = null;
+
+function renderVendorFilterOptions() {
+  const select = document.getElementById('vendor-filter');
+  const names = STATE.rows.map(r => r.name).sort((a,b) => a.localeCompare(b));
+  select.innerHTML = `<option value="">Todos os vendedores</option>` +
+    names.map(n => `<option value="${n.replace(/"/g,'&quot;')}" ${n===activeFilter?'selected':''}>${n}</option>`).join('');
+}
+
 function render() {
-  const { dates, rows } = STATE;
+  const { dates } = STATE;
+  const rows = getVisibleRows();
   const lastIdx = dates.length - 1;
   const prevIdx = Math.max(0, lastIdx - 1);
   const totals = dates.map((_, di) => rows.reduce((s, r) => s + (r.vals[di] || 0), 0));
@@ -431,16 +477,18 @@ function render() {
   const avg = rows.length ? lastTotal / rows.length : 0;
 
   const ctx = { lastIdx, prevIdx, lastTotal, prevTotal, totals };
+  lastCtx = ctx;
 
-  renderKPIs(ctx, best, avg, growth);
-  renderCharts(ctx);
-  renderHeatmap(ctx);
+  renderVendorFilterOptions();
+  renderKPIs(ctx, best, avg, growth, rows);
+  renderCharts(ctx, rows);
+  renderHeatmap(ctx, rows);
   renderTable(ctx);
 }
 
-function renderKPIs(ctx, best, avg, growth) {
+function renderKPIs(ctx, best, avg, growth, rows) {
   const { lastIdx, prevIdx, lastTotal } = ctx;
-  const { dates, rows } = STATE;
+  const { dates } = STATE;
   const isUp = growth >= 0;
   document.getElementById('kpi-grid').innerHTML = [
     { icon: ICONS.total, iconCls:'icon-blue', label:'Total de vendas', value: fmt(lastTotal), unit:'Sacas 125K', sub:'Valor da última data ('+dates[lastIdx]+')', cls:'' },
@@ -459,8 +507,8 @@ function renderKPIs(ctx, best, avg, growth) {
     </div>`).join('');
 }
 
-function renderCharts(ctx) {
-  const { dates, rows } = STATE;
+function renderCharts(ctx, rows) {
+  const { dates } = STATE;
   const { lastIdx, totals, lastTotal } = ctx;
 
   Object.values(CHARTS).forEach(c => c.destroy());
@@ -488,7 +536,8 @@ function renderCharts(ctx) {
       responsive: true, maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
-        tooltip: { callbacks: { label: c => '  '+fmt(c.parsed.y)+' sacas' } }
+        tooltip: { callbacks: { label: c => '  '+fmt(c.parsed.y)+' sacas' } },
+        datalabels: { display: false }
       },
       scales: {
         x: { grid: { display:false }, ticks: { color:'#7da0c0', font:{size:11} } },
@@ -504,14 +553,12 @@ function renderCharts(ctx) {
   const top10Range = top1Val - top10Min;
   document.getElementById('top10-list').innerHTML = sortedTop.map((r,i) => {
     const val = r.vals[lastIdx]||0;
-    const w = top1Val ? (val/top1Val*100) : 0;
     const t = top10Range ? (val-top10Min)/top10Range : 1;
     return `
     <div class="top10-row">
       <span class="top10-rank">${i+1}</span>
       <span class="top10-name" title="${r.name}">${r.name}</span>
-      <span class="top10-track"><span class="top10-fill" style="width:${w.toFixed(1)}%;background:${heatColor(t)}"></span></span>
-      <span class="top10-value">${fmt(val)}</span>
+      <span class="top10-value" style="color:${heatColor(t)}">${fmt(val)}</span>
     </div>`;
   }).join('');
 
@@ -519,22 +566,29 @@ function renderCharts(ctx) {
   const pieData = rows
     .map((r,i) => ({ name: r.name, val: r.vals[lastIdx]||0, color: COLORS[i%COLORS.length] }))
     .sort((a,b) => b.val - a.val);
-  document.getElementById('pie-legend').innerHTML = pieData.map(d => `
-    <span class="legend-item">
+  document.getElementById('pie-legend').innerHTML = pieData.map(d => {
+    const isDim = pieHighlight && pieHighlight !== d.name;
+    return `
+    <span class="legend-item clickable${isDim?' dimmed':''}" onclick="togglePieHighlight('${jsStr(d.name)}')">
       <span class="legend-dot" style="background:${d.color}"></span>
       ${d.name.split(' ')[0]} ${pct(lastTotal ? d.val/lastTotal : 0,1)}
-    </span>`).join('');
-  document.getElementById('pie-center').innerHTML = `
-    <div class="pc-label">Total</div>
-    <div class="pc-value">${fmt(lastTotal)}</div>
-    <div class="pc-unit">Sacas 125K</div>`;
+    </span>`;
+  }).join('');
+  const highlighted = pieHighlight ? pieData.find(d => d.name === pieHighlight) : null;
+  document.getElementById('pie-center').innerHTML = highlighted
+    ? `<div class="pc-label">${highlighted.name.split(' ')[0]}</div>
+       <div class="pc-value">${fmt(highlighted.val)}</div>
+       <div class="pc-unit">${pct(lastTotal ? highlighted.val/lastTotal : 0,1)}</div>`
+    : `<div class="pc-label">Total</div>
+       <div class="pc-value">${fmt(lastTotal)}</div>
+       <div class="pc-unit">Sacas 125K</div>`;
   CHARTS.pie = new Chart(document.getElementById('pieChart'), {
     type: 'doughnut',
     data: {
       labels: pieData.map(d => d.name),
       datasets: [{
         data: pieData.map(d => d.val),
-        backgroundColor: pieData.map(d => d.color),
+        backgroundColor: pieData.map(d => pieHighlight && pieHighlight !== d.name ? d.color+'33' : d.color),
         borderWidth: 2,
         borderColor: '#0f2038'
       }]
@@ -543,14 +597,24 @@ function renderCharts(ctx) {
       responsive: true, maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
-        tooltip: { callbacks: { label: c => ` ${fmt(c.parsed)} sacas (${pct(lastTotal ? c.parsed/lastTotal : 0,1)})` } }
+        tooltip: { callbacks: { label: c => ` ${fmt(c.parsed)} sacas (${pct(lastTotal ? c.parsed/lastTotal : 0,1)})` } },
+        datalabels: {
+          color: '#fff',
+          font: { weight: '700', size: 10 },
+          textStrokeColor: 'rgba(0,0,0,.55)',
+          textStrokeWidth: 2,
+          formatter: value => {
+            const p = lastTotal ? value/lastTotal*100 : 0;
+            return p < 3 ? '' : p.toFixed(1).replace('.', ',') + '%';
+          }
+        }
       }
     }
   });
 }
 
-function renderHeatmap(ctx) {
-  const { dates, rows } = STATE;
+function renderHeatmap(ctx, rows) {
+  const { dates } = STATE;
   const { lastIdx } = ctx;
   const thead = document.querySelector('#heatmap-table thead');
   const tbody = document.querySelector('#heatmap-table tbody');
@@ -592,7 +656,7 @@ function sortTable(key) {
 }
 
 function renderTable(ctx) {
-  const { dates, rows } = STATE;
+  const { dates } = STATE;
   const { lastIdx, prevIdx, lastTotal, totals, prevTotal } = ctx;
 
   if (!sortState) sortState = { key: 'val'+lastIdx, dir: -1 };
@@ -612,7 +676,9 @@ function renderTable(ctx) {
     <th>Ações</th>
   </tr>`;
 
-  const withIndex = rows.map((r, i) => ({ r, i }));
+  const withIndex = STATE.rows
+    .map((r, i) => ({ r, i }))
+    .filter(x => !activeFilter || x.r.name === activeFilter);
   withIndex.sort((a,b) => {
     const va = colValue(a.r, sortState.key, ctx);
     const vb = colValue(b.r, sortState.key, ctx);
@@ -745,6 +811,9 @@ function resetDash() {
   CHARTS = {};
   STATE = { dates: [], rows: [] };
   sortState = null;
+  activeFilter = '';
+  pieHighlight = null;
+  expandedVendors.clear();
   document.getElementById('upload-section').style.display = '';
   document.getElementById('dashboard').style.display = 'none';
   document.getElementById('fileinput').value = '';
