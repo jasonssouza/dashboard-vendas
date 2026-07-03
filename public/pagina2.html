@@ -78,13 +78,28 @@ textarea:focus{border-color:var(--accent2)}
 @media(max-width:820px){.compact-grid{grid-template-columns:minmax(360px,1fr)}}
 
 .chart-card{background:var(--surface);border-radius:12px;padding:.9rem 1rem;border:1px solid var(--border);min-width:360px;display:flex;flex-direction:column}
-.chart-title{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;display:flex;align-items:center;gap:6px;flex-shrink:0}
+.chart-title{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:6px;flex-shrink:0}
 .chart-body{position:relative;height:240px}
 .chart-body.scroll-y{overflow-y:auto}
 .chart-body.scroll{overflow:auto}
 .legend-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px}
 .legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)}
 .legend-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+
+/* MODO FOCO (expandir painel) */
+.chart-focus-btn{background:none;border:1px solid var(--border2);color:var(--text3);width:20px;height:20px;border-radius:5px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;flex-shrink:0;padding:0;font-family:inherit;transition:color .15s,border-color .15s}
+.chart-focus-btn:hover{color:var(--text);border-color:var(--accent2)}
+.chart-focus-btn:focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
+.chart-card-ghost{visibility:hidden}
+.focus-backdrop{position:fixed;inset:0;background:rgba(6,12,20,.7);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);z-index:199;opacity:0;pointer-events:none;transition:opacity .18s}
+.focus-backdrop.active{opacity:1;pointer-events:auto}
+.chart-card.expanded{position:fixed;inset:max(3vh,20px) max(4vw,20px);z-index:200;box-shadow:0 24px 64px rgba(0,0,0,.55);border-color:var(--accent2);animation:focusIn .18s ease-out}
+.chart-card.expanded .chart-body{height:auto;flex:1;min-height:0}
+.chart-card.expanded .pie-flex{height:auto;flex:1;min-height:0}
+.chart-card.expanded .pie-canvas-wrap{width:auto;height:100%;max-width:50%;max-height:520px;aspect-ratio:1/1}
+.chart-card.expanded table.heatmap{font-size:13px}
+.chart-card.expanded table.heatmap th,.chart-card.expanded table.heatmap td{padding:9px 14px}
+@keyframes focusIn{from{transform:scale(.96);opacity:.6}to{transform:scale(1);opacity:1}}
 
 /* PIE com legenda lateral */
 .pie-flex{display:flex;gap:12px;height:240px;align-items:stretch}
@@ -253,22 +268,22 @@ table.cultivar-table td.name-cell{color:var(--text);font-weight:500}
 
     <div class="compact-panel">
       <div class="compact-grid">
-        <div class="chart-card">
-          <div class="chart-title">Evolução diária das vendas (total)</div>
+        <div class="chart-card" ondblclick="toggleCardFocus(this)">
+          <div class="chart-title">Evolução diária das vendas (total)<button class="chart-focus-btn" aria-label="Expandir" title="Expandir" onclick="toggleCardFocus(this.closest('.chart-card'))">⤢</button></div>
           <div class="chart-body">
             <canvas id="lineChart" role="img" aria-label="Gráfico de linha com evolução diária do total de vendas">Gráfico de linha indisponível — evolução do total de vendas por data.</canvas>
           </div>
         </div>
-        <div class="chart-card">
-          <div class="chart-title">Top 10 vendedores – saldo na data selecionada</div>
+        <div class="chart-card" ondblclick="toggleCardFocus(this)">
+          <div class="chart-title">Top 10 vendedores – saldo na data selecionada<button class="chart-focus-btn" aria-label="Expandir" title="Expandir" onclick="toggleCardFocus(this.closest('.chart-card'))">⤢</button></div>
           <div class="chart-body scroll-y">
             <div id="top10-wrap" style="position:relative">
               <canvas id="top10Chart" role="img" aria-label="Gráfico de barras com o ranking dos 10 melhores vendedores na data selecionada">Gráfico de barras indisponível — ranking dos 10 melhores vendedores.</canvas>
             </div>
           </div>
         </div>
-        <div class="chart-card">
-          <div class="chart-title">Participação dos vendedores</div>
+        <div class="chart-card" ondblclick="toggleCardFocus(this)">
+          <div class="chart-title">Participação dos vendedores<button class="chart-focus-btn" aria-label="Expandir" title="Expandir" onclick="toggleCardFocus(this.closest('.chart-card'))">⤢</button></div>
           <div class="pie-flex">
             <div class="pie-canvas-wrap">
               <canvas id="pieChart" role="img" aria-label="Gráfico de rosca com participação percentual de cada vendedor">Gráfico de rosca indisponível — participação percentual de cada vendedor.</canvas>
@@ -277,8 +292,8 @@ table.cultivar-table td.name-cell{color:var(--text);font-weight:500}
             <div id="pie-legend" class="pie-legend-side"></div>
           </div>
         </div>
-        <div class="chart-card">
-          <div class="chart-title">Mapa de calor – vendas por vendedor</div>
+        <div class="chart-card" ondblclick="toggleCardFocus(this)">
+          <div class="chart-title">Mapa de calor – vendas por vendedor<button class="chart-focus-btn" aria-label="Expandir" title="Expandir" onclick="toggleCardFocus(this.closest('.chart-card'))">⤢</button></div>
           <div class="chart-body scroll">
             <table class="heatmap" id="heatmap-table"><thead></thead><tbody></tbody></table>
           </div>
@@ -299,6 +314,8 @@ table.cultivar-table td.name-cell{color:var(--text);font-weight:500}
     </div>
   </div>
 </div>
+
+<div class="focus-backdrop" id="focus-backdrop" onclick="collapseFocus()"></div>
 
 <!-- MODAL -->
 <div class="modal-overlay" id="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal()">
@@ -351,8 +368,68 @@ let activeFilter = '';  // vendor name selected in the top filter, '' = all
 let pieHighlight = null; // vendor name isolated in the donut legend
 let dateFilterIdx = null; // index into STATE.dates used as "current", null = latest
 const expandedVendors = new Set();
+let focusedCard = null; // { card, ghost } — the single .chart-card currently in focus mode
 
 if (window.ChartDataLabels) Chart.register(ChartDataLabels);
+
+/* ---------- focus mode (like Power BI's "Focus mode") ---------- */
+const FOCUS_CHART_KEY = { lineChart: 'line', top10Chart: 'top10', pieChart: 'pie' };
+
+function chartKeyForCard(card) {
+  const canvas = card.querySelector('canvas');
+  return canvas ? FOCUS_CHART_KEY[canvas.id] || null : null;
+}
+
+function toggleCardFocus(card) {
+  if (card.classList.contains('expanded')) collapseFocus();
+  else expandCard(card);
+}
+
+function expandCard(card) {
+  if (focusedCard) collapseFocus();
+
+  const ghost = document.createElement('div');
+  ghost.className = 'chart-card chart-card-ghost';
+  ghost.style.height = card.getBoundingClientRect().height + 'px';
+  card.parentNode.insertBefore(ghost, card);
+
+  card.classList.add('expanded');
+  document.getElementById('focus-backdrop').classList.add('active');
+
+  const btn = card.querySelector('.chart-focus-btn');
+  btn.textContent = '✕';
+  btn.setAttribute('aria-label', 'Fechar modo foco');
+  btn.setAttribute('title', 'Fechar');
+
+  focusedCard = { card, ghost };
+  btn.focus();
+
+  requestAnimationFrame(() => {
+    const key = chartKeyForCard(card);
+    if (key && CHARTS[key]) CHARTS[key].resize();
+  });
+}
+
+function collapseFocus() {
+  if (!focusedCard) return;
+  const { card, ghost } = focusedCard;
+
+  card.classList.remove('expanded');
+  ghost.remove();
+  document.getElementById('focus-backdrop').classList.remove('active');
+
+  const btn = card.querySelector('.chart-focus-btn');
+  btn.textContent = '⤢';
+  btn.setAttribute('aria-label', 'Expandir');
+  btn.setAttribute('title', 'Expandir');
+
+  focusedCard = null;
+
+  requestAnimationFrame(() => {
+    const key = chartKeyForCard(card);
+    if (key && CHARTS[key]) CHARTS[key].resize();
+  });
+}
 
 function toggleVendorExpand(name) {
   if (expandedVendors.has(name)) expandedVendors.delete(name);
@@ -843,12 +920,15 @@ function removeVendor(index) {
 }
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeModal();
+  if (e.key !== 'Escape') return;
+  if (focusedCard) collapseFocus();
+  else closeModal();
 });
 
 /* ---------- reset ---------- */
 function resetDash() {
   if (!confirm('Reiniciar o dashboard e descartar os dados atuais?')) return;
+  if (focusedCard) collapseFocus();
   Object.values(CHARTS).forEach(c => c.destroy());
   CHARTS = {};
   STATE = { dates: [], rows: [] };
