@@ -81,11 +81,6 @@ textarea:focus{border-color:var(--accent2)}
 .legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)}
 .legend-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
 
-/* TOP 10 */
-.top10-row{display:flex;align-items:center;gap:10px;margin-bottom:11px;font-size:12px}
-.top10-rank{width:20px;height:20px;border-radius:50%;background:var(--gold);color:#0a1526;font-weight:700;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.top10-name{flex:1;min-width:0;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.top10-value{text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums;font-weight:700;font-size:12px}
 
 /* PIE */
 .pie-canvas-wrap{position:relative;width:100%;max-width:280px;height:260px;margin:0 auto}
@@ -238,6 +233,7 @@ table.cultivar-table td.name-cell{color:var(--text);font-weight:500}
       <select class="filter-select" id="vendor-filter" onchange="setVendorFilter(this.value)">
         <option value="">Todos os vendedores</option>
       </select>
+      <select class="filter-select" id="date-filter" onchange="setDateFilter(this.value)"></select>
       <span class="spacer"></span>
       <button class="btn btn-sm btn-primary" onclick="openModal(null)">+ Adicionar vendedor</button>
       <button class="btn btn-sm" onclick="resetDash()">↺ Reiniciar</button>
@@ -253,8 +249,10 @@ table.cultivar-table td.name-cell{color:var(--text);font-weight:500}
         </div>
       </div>
       <div class="chart-card">
-        <div class="chart-title">Top 10 vendedores – saldo atual</div>
-        <div id="top10-list"></div>
+        <div class="chart-title">Top 10 vendedores – saldo atual vs. data anterior</div>
+        <div id="top10-wrap" style="position:relative">
+          <canvas id="top10Chart" role="img" aria-label="Gráfico de barras clusterizado comparando o saldo atual e da data anterior dos 10 melhores vendedores">Gráfico de barras indisponível — ranking dos 10 melhores vendedores.</canvas>
+        </div>
       </div>
       <div class="chart-card">
         <div class="chart-title">Participação dos vendedores</div>
@@ -335,6 +333,7 @@ let sortState = null;   // { key, dir }
 let editingIndex = null; // null = adding new vendor
 let activeFilter = '';  // vendor name selected in the top filter, '' = all
 let pieHighlight = null; // vendor name isolated in the donut legend
+let dateFilterIdx = null; // index into STATE.dates used as "current", null = latest
 const expandedVendors = new Set();
 
 if (window.ChartDataLabels) Chart.register(ChartDataLabels);
@@ -347,6 +346,11 @@ function toggleVendorExpand(name) {
 
 function setVendorFilter(name) {
   activeFilter = name;
+  render();
+}
+
+function setDateFilter(idxStr) {
+  dateFilterIdx = idxStr === '' ? null : parseInt(idxStr, 10);
   render();
 }
 
@@ -406,6 +410,7 @@ function showDashboard(dates, rows, updateLabel) {
   sortState = null;
   activeFilter = '';
   pieHighlight = null;
+  dateFilterIdx = null;
   expandedVendors.clear();
   document.getElementById('upload-section').style.display = 'none';
   document.getElementById('dashboard').style.display = '';
@@ -464,10 +469,17 @@ function renderVendorFilterOptions() {
     names.map(n => `<option value="${n.replace(/"/g,'&quot;')}" ${n===activeFilter?'selected':''}>${n}</option>`).join('');
 }
 
+function renderDateFilterOptions(lastIdx) {
+  const select = document.getElementById('date-filter');
+  const { dates } = STATE;
+  select.innerHTML = dates.map((d, i) => `
+    <option value="${i}" ${i===lastIdx?'selected':''}>${d}${i===dates.length-1?' (mais recente)':''}</option>`).join('');
+}
+
 function render() {
   const { dates } = STATE;
   const rows = getVisibleRows();
-  const lastIdx = dates.length - 1;
+  const lastIdx = dateFilterIdx !== null ? Math.min(dateFilterIdx, dates.length - 1) : dates.length - 1;
   const prevIdx = Math.max(0, lastIdx - 1);
   const totals = dates.map((_, di) => rows.reduce((s, r) => s + (r.vals[di] || 0), 0));
   const lastTotal = totals[lastIdx];
@@ -480,6 +492,7 @@ function render() {
   lastCtx = ctx;
 
   renderVendorFilterOptions();
+  renderDateFilterOptions(lastIdx);
   renderKPIs(ctx, best, avg, growth, rows);
   renderCharts(ctx, rows);
   renderHeatmap(ctx, rows);
@@ -546,21 +559,32 @@ function renderCharts(ctx, rows) {
     }
   });
 
-  // TOP 10 (custom HTML ranking, not a Chart.js canvas)
+  // TOP 10 — clustered bar chart (saldo atual vs. data anterior)
+  const { prevIdx } = ctx;
   const sortedTop = [...rows].sort((a,b) => (b.vals[lastIdx]||0) - (a.vals[lastIdx]||0)).slice(0,10);
-  const top1Val = sortedTop.length ? sortedTop[0].vals[lastIdx]||0 : 1;
-  const top10Min = sortedTop.length ? sortedTop[sortedTop.length-1].vals[lastIdx]||0 : 0;
-  const top10Range = top1Val - top10Min;
-  document.getElementById('top10-list').innerHTML = sortedTop.map((r,i) => {
-    const val = r.vals[lastIdx]||0;
-    const t = top10Range ? (val-top10Min)/top10Range : 1;
-    return `
-    <div class="top10-row">
-      <span class="top10-rank">${i+1}</span>
-      <span class="top10-name" title="${r.name}">${r.name}</span>
-      <span class="top10-value" style="color:${heatColor(t)}">${fmt(val)}</span>
-    </div>`;
-  }).join('');
+  document.getElementById('top10-wrap').style.height = (sortedTop.length * 46 + 60) + 'px';
+  CHARTS.top10 = new Chart(document.getElementById('top10Chart'), {
+    type: 'bar',
+    data: {
+      labels: sortedTop.map(r => r.name.length > 22 ? r.name.slice(0,22)+'…' : r.name),
+      datasets: [
+        { label: dates[lastIdx], data: sortedTop.map(r => r.vals[lastIdx]||0), backgroundColor: COLORS[0], borderRadius: 3 },
+        { label: dates[prevIdx], data: sortedTop.map(r => r.vals[prevIdx]||0), backgroundColor: COLORS[2], borderRadius: 3 }
+      ]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, position: 'top', align: 'end', labels: { color: '#8fa8c7', font: { size: 10 }, boxWidth: 10, boxHeight: 10 } },
+        tooltip: { callbacks: { label: c => `  ${c.dataset.label}: ${fmt(c.parsed.x)} sacas` } },
+        datalabels: { display: false }
+      },
+      scales: {
+        x: { grid: { color:'rgba(30,53,80,.7)' }, ticks: { color:'#7da0c0', font:{size:10}, callback: v => fmt(v) } },
+        y: { grid: { display:false }, ticks: { color:'#eef3fa', font:{size:10} } }
+      }
+    }
+  });
 
   // PIE CHART (all vendors)
   const pieData = rows
@@ -813,6 +837,7 @@ function resetDash() {
   sortState = null;
   activeFilter = '';
   pieHighlight = null;
+  dateFilterIdx = null;
   expandedVendors.clear();
   document.getElementById('upload-section').style.display = '';
   document.getElementById('dashboard').style.display = 'none';
@@ -822,6 +847,7 @@ function resetDash() {
   document.getElementById('header-sub').textContent = 'Importe uma tabela para gerar o dashboard automaticamente';
   document.getElementById('period-badge').style.display = 'none';
 }
+
 </script>
 </body>
 </html>
