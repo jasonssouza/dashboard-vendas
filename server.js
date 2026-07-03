@@ -45,6 +45,13 @@ function cumulativeSeries(raw, keyFn, dateIndex, axisLen) {
   return result;
 }
 
+// "Cultura = SEM.SOJA" e "Tipo pedidos = Em andamento + Finalizados" (exclui vis_tipo_visita
+// 2 e 11, que correspondem a "Orçamentos") replicam o filtro padrão do relatório do CRM.
+const REPORT_FILTER = `
+     JOIN visita v ON v.vis_id = b.id_crm
+     WHERE b.safra = ? AND b.vendedor IS NOT NULL
+       AND v.vis_cultura = 'SEM.SOJA' AND b.vis_tipo_visita NOT IN (2, 11)`;
+
 async function fetchVendasData(lastN) {
   const [[safraRow]] = await pool.query(
     `SELECT safra FROM vw_bi_cambai WHERE safra IS NOT NULL GROUP BY safra ORDER BY MAX(data) DESC LIMIT 1`
@@ -53,11 +60,11 @@ async function fetchVendasData(lastN) {
   const safra = safraRow.safra;
 
   const [raw] = await pool.query(
-    `SELECT vendedor, data, SUM(sacaria) AS sacaria
-     FROM vw_bi_cambai
-     WHERE safra = ? AND vendedor IS NOT NULL
-     GROUP BY vendedor, data
-     ORDER BY data ASC`,
+    `SELECT b.vendedor, b.data, SUM(b.sacaria) AS sacaria
+     FROM vw_bi_cambai b
+     ${REPORT_FILTER}
+     GROUP BY b.vendedor, b.data
+     ORDER BY b.data ASC`,
     [safra]
   );
 
@@ -66,11 +73,12 @@ async function fetchVendasData(lastN) {
   const vendorSeries = cumulativeSeries(raw, r => r.vendedor, dateIndex, dateAxis.length);
 
   const [rawCultivar] = await pool.query(
-    `SELECT vendedor, cultivar, data, SUM(sacaria) AS sacaria
-     FROM vw_bi_cambai
-     WHERE safra = ? AND vendedor IS NOT NULL AND cultivar IS NOT NULL
-     GROUP BY vendedor, cultivar, data
-     ORDER BY data ASC`,
+    `SELECT b.vendedor, b.cultivar, b.data, SUM(b.sacaria) AS sacaria
+     FROM vw_bi_cambai b
+     ${REPORT_FILTER}
+       AND b.cultivar IS NOT NULL
+     GROUP BY b.vendedor, b.cultivar, b.data
+     ORDER BY b.data ASC`,
     [safra]
   );
   const cultivarDaily = new Map();
