@@ -5,7 +5,8 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-COPY dashboard_vendas.html server.js ./
+COPY server.js ./
+COPY public ./public
 
 EXPOSE 3000
 

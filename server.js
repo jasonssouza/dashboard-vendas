@@ -113,8 +113,13 @@ async function fetchVendasData(lastN) {
   return { dates, rows, safra };
 }
 
+const PUBLIC_DIR = path.join(__dirname, 'public');
+
 const app = express();
-app.use(express.static(path.join(__dirname), { index: 'dashboard_vendas.html' }));
+app.use(express.static(PUBLIC_DIR, { index: 'pagina1.html' }));
+
+app.get('/pagina1', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'pagina1.html')));
+app.get('/pagina2', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'pagina2.html')));
 
 app.get('/api/vendas', async (req, res) => {
   const lastN = Math.max(1, Math.min(200, parseInt(req.query.dates, 10) || 20));
