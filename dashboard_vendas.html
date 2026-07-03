@@ -249,9 +249,9 @@ table.cultivar-table td.name-cell{color:var(--text);font-weight:500}
         </div>
       </div>
       <div class="chart-card">
-        <div class="chart-title">Top 10 vendedores – saldo atual vs. data anterior</div>
+        <div class="chart-title">Top 10 vendedores – saldo na data selecionada</div>
         <div id="top10-wrap" style="position:relative">
-          <canvas id="top10Chart" role="img" aria-label="Gráfico de barras clusterizado comparando o saldo atual e da data anterior dos 10 melhores vendedores">Gráfico de barras indisponível — ranking dos 10 melhores vendedores.</canvas>
+          <canvas id="top10Chart" role="img" aria-label="Gráfico de barras com o ranking dos 10 melhores vendedores na data selecionada">Gráfico de barras indisponível — ranking dos 10 melhores vendedores.</canvas>
         </div>
       </div>
       <div class="chart-card">
@@ -559,28 +559,30 @@ function renderCharts(ctx, rows) {
     }
   });
 
-  // TOP 10 — clustered bar chart (saldo atual vs. data anterior)
-  const { prevIdx } = ctx;
+  // TOP 10 — bar chart with the selected date's balance
   const sortedTop = [...rows].sort((a,b) => (b.vals[lastIdx]||0) - (a.vals[lastIdx]||0)).slice(0,10);
-  document.getElementById('top10-wrap').style.height = (sortedTop.length * 46 + 60) + 'px';
+  document.getElementById('top10-wrap').style.height = (sortedTop.length * 32 + 40) + 'px';
   CHARTS.top10 = new Chart(document.getElementById('top10Chart'), {
     type: 'bar',
     data: {
       labels: sortedTop.map(r => r.name.length > 22 ? r.name.slice(0,22)+'…' : r.name),
       datasets: [
-        { label: dates[lastIdx], data: sortedTop.map(r => r.vals[lastIdx]||0), backgroundColor: COLORS[0], borderRadius: 3 },
-        { label: dates[prevIdx], data: sortedTop.map(r => r.vals[prevIdx]||0), backgroundColor: COLORS[2], borderRadius: 3 }
+        { data: sortedTop.map(r => r.vals[lastIdx]||0), backgroundColor: COLORS[0], borderRadius: 3 }
       ]
     },
     options: {
       indexAxis: 'y', responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: { display: true, position: 'top', align: 'end', labels: { color: '#8fa8c7', font: { size: 10 }, boxWidth: 10, boxHeight: 10 } },
-        tooltip: { callbacks: { label: c => `  ${c.dataset.label}: ${fmt(c.parsed.x)} sacas` } },
-        datalabels: { display: false }
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => `  ${fmt(c.parsed.x)} sacas` } },
+        datalabels: {
+          display: true, anchor: 'end', align: 'end',
+          color: '#eef3fa', font: { size: 10, weight: '700' },
+          formatter: v => fmt(v)
+        }
       },
       scales: {
-        x: { grid: { color:'rgba(30,53,80,.7)' }, ticks: { color:'#7da0c0', font:{size:10}, callback: v => fmt(v) } },
+        x: { grace: '15%', grid: { color:'rgba(30,53,80,.7)' }, ticks: { color:'#7da0c0', font:{size:10}, callback: v => fmt(v) } },
         y: { grid: { display:false }, ticks: { color:'#eef3fa', font:{size:10} } }
       }
     }
