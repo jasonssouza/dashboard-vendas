@@ -6,6 +6,7 @@
 <title>Dashboard – Evolução das Vendas por Vendedor (Layout 2)</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -383,7 +384,10 @@ tr.cultivar-row td.name-cell{padding-left:26px;color:var(--text)}
     </div>
 
     <div class="table-wrap">
-      <div class="chart-title" style="margin-bottom:12px">Desempenho detalhado dos vendedores</div>
+      <div class="chart-title" style="margin-bottom:12px">
+        Desempenho detalhado dos vendedores
+        <button class="btn btn-sm" onclick="exportTableExcel()">⬇ Exportar Excel</button>
+      </div>
       <div class="table-scroll">
         <table id="data-table"><thead></thead><tbody></tbody></table>
       </div>
@@ -1056,6 +1060,18 @@ function renderTable(ctx) {
     <td><span class="badge ${tbc}">${tarrow} ${Math.abs(totalDiffPct*100).toFixed(2)}%</span></td>
     <td></td><td></td>`;
   tbody.appendChild(tr);
+}
+
+/* ---------- export ---------- */
+function exportTableExcel() {
+  // Reads straight from the rendered <table>, so the export always matches
+  // exactly what's on screen (current vendor/cultivar/date filters, sort,
+  // expanded cultivar rows) without recomputing anything.
+  const ws = XLSX.utils.table_to_sheet(document.getElementById('data-table'));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Vendedores');
+  const today = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `desempenho_vendedores_${today}.xlsx`);
 }
 
 /* ---------- add / edit / remove vendor ---------- */
