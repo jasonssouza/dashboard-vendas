@@ -537,6 +537,11 @@ function collapseFocus() {
 
   setTimeout(() => {
     card.classList.remove('expanded', 'closing', 'narrow-focus');
+    // The native resize:both handle sets inline width/height directly on
+    // the card while it's expanded; clear them or the card comes back into
+    // the compact grid stuck at whatever size the user last dragged it to.
+    card.style.width = '';
+    card.style.height = '';
     ghost.remove();
     requestAnimationFrame(() => {
       if (key) applyFocusChartAdjustments(key, false);
