@@ -207,10 +207,18 @@ tr:hover td{background:rgba(255,255,255,.03)}
 #data-table th:nth-child(2),#data-table td:nth-child(2){position:sticky;left:32px;background:var(--surface);z-index:2;box-shadow:2px 0 4px rgba(0,0,0,.25)}
 #data-table th:nth-child(1),#data-table th:nth-child(2){z-index:3;background:var(--surface)}
 #data-table tr.total-row td:nth-child(1),#data-table tr.total-row td:nth-child(2){background:var(--surface2)}
-/* the cultivar drill-down row is a single wide <td colspan> — it is NOT a
-   real "column 1/2" and must not inherit the sticky-left freeze above, or
+/* the cultivar breakdown label is a single wide <td colspan> — it is NOT a
+   real "column 1/2" and must not inherit the sticky-left freeze below, or
    it gets stuck mid-scroll and overlaps the frozen header/columns. */
-#data-table tr.cultivar-subrow > td{position:static;left:auto;box-shadow:none}
+#data-table tr.cultivar-label > td{position:static;left:auto;box-shadow:none;background:var(--surface2);padding:8px 10px 2px 34px;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:none}
+/* cultivar rows reuse the exact same frozen index/name columns (real
+   td:nth-child(1)/(2), same mechanism as vendor rows) instead of a separate
+   nested table — a nested sticky table inside this already-sticky table hit a
+   browser quirk where the inner sticky cell's content got clipped once
+   "stuck", cutting the cultivar description short while scrolling. */
+#data-table tr.cultivar-row td:nth-child(1),#data-table tr.cultivar-row td:nth-child(2){background:var(--surface2)}
+tr.cultivar-row td{background:var(--surface2);color:var(--text2);font-size:10px}
+tr.cultivar-row td.name-cell{padding-left:26px;color:var(--text)}
 .badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500}
 .badge-up{background:rgba(27,175,122,.15);color:var(--green)}
 .badge-down{background:rgba(227,73,72,.15);color:var(--red)}
@@ -221,12 +229,6 @@ tr:hover td{background:rgba(255,255,255,.03)}
 .vendor-toggle{cursor:pointer;display:inline-flex;align-items:center;gap:6px}
 .vendor-toggle:hover{color:var(--accent2)}
 .vendor-chevron{color:var(--accent2);font-size:9px;width:10px;display:inline-block}
-tr.cultivar-subrow td{background:var(--surface2);padding:10px 10px 14px 34px}
-.cultivar-title{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
-table.cultivar-table{width:auto;min-width:280px;border-collapse:collapse;font-size:11px}
-table.cultivar-table th{padding:5px 10px;text-align:left;color:var(--text3);font-weight:600;border-bottom:1px solid var(--border);white-space:nowrap;font-size:10px}
-table.cultivar-table td{padding:5px 10px;color:var(--text2);border-bottom:1px solid rgba(30,53,80,.4);white-space:nowrap;font-variant-numeric:tabular-nums}
-table.cultivar-table td.name-cell{color:var(--text);font-weight:500}
 
 /* SECTION ACTIONS */
 .section-head{display:flex;align-items:center;gap:10px;margin-bottom:.9rem;flex-wrap:wrap}
@@ -1016,6 +1018,7 @@ function renderTable(ctx) {
     </tr>`;
     if (!hasCultivars || !expanded) return mainRow;
     const visibleCultivars = cultivarFilter ? r.cultivars.filter(c => c.name === cultivarFilter) : r.cultivars;
+    const labelRow = `<tr class="cultivar-label"><td colspan="${colCount}">${cultivarFilter ? 'Cultivar ' + cultivarFilter : 'Cultivares'} — ${r.name}</td></tr>`;
     const cultivarRows = visibleCultivars.map(c => {
       const cLast = c.vals[lastIdx] || 0;
       const cPrev = c.vals[prevIdx] || 0;
@@ -1025,24 +1028,18 @@ function renderTable(ctx) {
       const cArrow = cDiff>0?'▲':cDiff<0?'▼':'→';
       // Share of this cultivar within the vendor's own total (not the grand total).
       const cPart = last ? cLast/last : 0;
-      return `<tr>
-        <td class="name-cell">${c.name}</td>
+      return `<tr class="cultivar-row">
+        <td></td>
+        <td class="name-cell" title="${c.name.replace(/"/g,'&quot;')}">${c.name}</td>
         ${c.vals.slice(0, visibleDates.length).map(v=>`<td>${fmt(v)}</td>`).join('')}
         <td>${pct(cPart,2)}</td>
         <td><span class="badge ${cBc}">${cDiff>=0?'+':''}${fmt(cDiff)}</span></td>
         <td><span class="badge ${cBc}">${cArrow} ${Math.abs(cDiffPct*100).toFixed(2)}%</span></td>
+        <td></td>
+        <td></td>
       </tr>`;
     }).join('');
-    const subRow = `<tr class="cultivar-subrow">
-      <td colspan="${colCount}">
-        <div class="cultivar-title">${cultivarFilter ? 'Cultivar ' + cultivarFilter : 'Cultivares'} — ${r.name}</div>
-        <table class="cultivar-table">
-          <thead><tr><th>Cultivar</th>${visibleDates.map(d=>`<th>${d}</th>`).join('')}<th>Part. %</th><th>Cresc. Sacas</th><th>Cresc. %</th></tr></thead>
-          <tbody>${cultivarRows}</tbody>
-        </table>
-      </td>
-    </tr>`;
-    return mainRow + subRow;
+    return mainRow + labelRow + cultivarRows;
   }).join('');
 
   const tr = document.createElement('tr');
