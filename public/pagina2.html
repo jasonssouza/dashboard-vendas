@@ -692,14 +692,17 @@ function render() {
   const rows = getVisibleRows();
   const lastIdx = dateFilterIdx !== null ? Math.min(dateFilterIdx, dates.length - 1) : dates.length - 1;
   const prevIdx = Math.max(0, lastIdx - 1);
-  const totals = dates.map((_, di) => rows.reduce((s, r) => s + (r.vals[di] || 0), 0));
+  // "Até esta data": when a date filter is active, every table/chart/heatmap
+  // column is cut off at lastIdx instead of always showing the full loaded range.
+  const visibleDates = dates.slice(0, lastIdx + 1);
+  const totals = visibleDates.map((_, di) => rows.reduce((s, r) => s + (r.vals[di] || 0), 0));
   const lastTotal = totals[lastIdx];
   const prevTotal = totals[prevIdx];
   const growth = prevTotal ? (lastTotal - prevTotal) / prevTotal : 0;
   const best = [...rows].sort((a,b) => (b.vals[lastIdx]||0) - (a.vals[lastIdx]||0))[0];
   const avg = rows.length ? lastTotal / rows.length : 0;
 
-  const ctx = { lastIdx, prevIdx, lastTotal, prevTotal, totals };
+  const ctx = { lastIdx, prevIdx, lastTotal, prevTotal, totals, visibleDates };
   lastCtx = ctx;
 
   renderVendorFilterOptions();
@@ -737,8 +740,7 @@ function renderKPIs(ctx, best, avg, growth, rows) {
 }
 
 function renderCharts(ctx, rows) {
-  const { dates } = STATE;
-  const { lastIdx, totals, lastTotal } = ctx;
+  const { lastIdx, totals, lastTotal, visibleDates } = ctx;
 
   Object.values(CHARTS).forEach(c => c.destroy());
   CHARTS = {};
@@ -747,7 +749,7 @@ function renderCharts(ctx, rows) {
   CHARTS.line = new Chart(document.getElementById('lineChart'), {
     type: 'line',
     data: {
-      labels: dates,
+      labels: visibleDates,
       datasets: [{
         label: 'Total sacas',
         data: totals,
@@ -869,19 +871,18 @@ function renderCharts(ctx, rows) {
 }
 
 function renderHeatmap(ctx, rows) {
-  const { dates } = STATE;
-  const { lastIdx } = ctx;
+  const { lastIdx, visibleDates } = ctx;
   const thead = document.querySelector('#heatmap-table thead');
   const tbody = document.querySelector('#heatmap-table tbody');
 
-  thead.innerHTML = `<tr><th>Vendedor</th>${dates.map(d=>`<th>${d}</th>`).join('')}</tr>`;
+  thead.innerHTML = `<tr><th>Vendedor</th>${visibleDates.map(d=>`<th>${d}</th>`).join('')}</tr>`;
 
-  const mins = dates.map((_,di) => Math.min(...rows.map(r => r.vals[di]||0)));
-  const maxs = dates.map((_,di) => Math.max(...rows.map(r => r.vals[di]||0)));
+  const mins = visibleDates.map((_,di) => Math.min(...rows.map(r => r.vals[di]||0)));
+  const maxs = visibleDates.map((_,di) => Math.max(...rows.map(r => r.vals[di]||0)));
 
   const sorted = [...rows].sort((a,b) => (b.vals[lastIdx]||0) - (a.vals[lastIdx]||0));
   tbody.innerHTML = sorted.map(r => {
-    const cells = r.vals.map((v,di) => {
+    const cells = r.vals.slice(0, visibleDates.length).map((v,di) => {
       const range = maxs[di] - mins[di];
       const t = range ? (v - mins[di]) / range : 0.5;
       return `<td style="background:${heatColor(t)}">${fmt(v)}</td>`;
@@ -911,8 +912,7 @@ function sortTable(key) {
 }
 
 function renderTable(ctx) {
-  const { dates } = STATE;
-  const { lastIdx, prevIdx, lastTotal, totals, prevTotal } = ctx;
+  const { lastIdx, prevIdx, lastTotal, totals, prevTotal, visibleDates } = ctx;
 
   if (!sortState) sortState = { key: 'val'+lastIdx, dir: -1 };
 
@@ -923,7 +923,7 @@ function renderTable(ctx) {
   thead.innerHTML = `<tr>
     <th>#</th>
     <th class="sortable" onclick="sortTable('name')">Vendedor${arrow('name')}</th>
-    ${dates.map((d,di)=>`<th class="sortable" onclick="sortTable('val${di}')">${d}${arrow('val'+di)}</th>`).join('')}
+    ${visibleDates.map((d,di)=>`<th class="sortable" onclick="sortTable('val${di}')">${d}${arrow('val'+di)}</th>`).join('')}
     <th class="sortable" onclick="sortTable('part')">Part. %${arrow('part')}</th>
     <th class="sortable" onclick="sortTable('diff')">Cresc. Sacas${arrow('diff')}</th>
     <th class="sortable" onclick="sortTable('diffPct')">Cresc. %${arrow('diffPct')}</th>
@@ -942,7 +942,7 @@ function renderTable(ctx) {
     return 0;
   });
 
-  const colCount = dates.length + 7;
+  const colCount = visibleDates.length + 7;
   tbody.innerHTML = withIndex.map(({r, i}, rank) => {
     const last = r.vals[lastIdx]||0;
     const prev = r.vals[prevIdx]||0;
@@ -961,7 +961,7 @@ function renderTable(ctx) {
     const mainRow = `<tr>
       <td style="color:var(--text3)">${rank+1}</td>
       <td style="font-weight:500">${nameCell}</td>
-      ${r.vals.map(v=>`<td>${fmt(v)}</td>`).join('')}
+      ${r.vals.slice(0, visibleDates.length).map(v=>`<td>${fmt(v)}</td>`).join('')}
       <td>${pct(lastTotal ? last/lastTotal : 0,2)}</td>
       <td><span class="badge ${bc}">${diff>=0?'+':''}${fmt(diff)}</span></td>
       <td><span class="badge ${bc}">${arrowIcon} ${Math.abs(diffPct*100).toFixed(2)}%</span></td>
@@ -974,13 +974,13 @@ function renderTable(ctx) {
     if (!hasCultivars || !expanded) return mainRow;
     const cultivarRows = r.cultivars.map(c => `<tr>
         <td class="name-cell">${c.name}</td>
-        ${c.vals.map(v=>`<td>${fmt(v)}</td>`).join('')}
+        ${c.vals.slice(0, visibleDates.length).map(v=>`<td>${fmt(v)}</td>`).join('')}
       </tr>`).join('');
     const subRow = `<tr class="cultivar-subrow">
       <td colspan="${colCount}">
         <div class="cultivar-title">Cultivares — ${r.name}</div>
         <table class="cultivar-table">
-          <thead><tr><th>Cultivar</th>${dates.map(d=>`<th>${d}</th>`).join('')}</tr></thead>
+          <thead><tr><th>Cultivar</th>${visibleDates.map(d=>`<th>${d}</th>`).join('')}</tr></thead>
           <tbody>${cultivarRows}</tbody>
         </table>
       </td>
