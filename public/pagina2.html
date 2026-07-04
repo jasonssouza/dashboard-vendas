@@ -91,21 +91,72 @@ textarea:focus{border-color:var(--accent2)}
 .chart-focus-btn:hover{color:var(--text);border-color:var(--accent2)}
 .chart-focus-btn:focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
 .chart-card-ghost{visibility:hidden}
-.focus-backdrop{position:fixed;inset:0;background:rgba(6,12,20,.7);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);z-index:199;opacity:0;pointer-events:none;transition:opacity .18s}
+.focus-backdrop{position:fixed;inset:0;background:rgba(6,12,20,.55);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);z-index:199;opacity:0;pointer-events:none;transition:opacity .2s}
 .focus-backdrop.active{opacity:1;pointer-events:auto}
-.chart-card.expanded{position:fixed;inset:max(3vh,20px) max(4vw,20px);z-index:200;box-shadow:0 24px 64px rgba(0,0,0,.55);border-color:var(--accent2);animation:focusIn .18s ease-out}
+
+.chart-card.expanded{
+  position:fixed;left:50%;top:50%;
+  width:min(800px, calc(100vw - 32px));
+  height:min(580px, calc(100vh - 32px));
+  min-width:420px;min-height:380px;
+  max-width:calc(100vw - 32px);max-height:calc(100vh - 32px);
+  z-index:200;
+  box-shadow:0 24px 64px rgba(0,0,0,.55);
+  border-color:var(--accent2);
+  background:rgba(15,32,56,.88);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  resize:both;overflow:auto;
+  opacity:1;transform:translate(-50%,-50%) scale(1);
+  animation:focusIn .24s cubic-bezier(.16,1,.3,1);
+}
+.chart-card.expanded:has(#top10Chart),
+.chart-card.expanded:has(#heatmap-table){
+  width:min(1080px, calc(100vw - 32px));
+}
+.chart-card.expanded::after{
+  content:'';position:absolute;right:3px;bottom:3px;width:14px;height:14px;
+  background:linear-gradient(135deg,transparent 0 50%,var(--border2) 50%);
+  opacity:.8;pointer-events:none;border-bottom-right-radius:3px;
+}
+.chart-card.expanded.closing{animation:focusOut .16s ease-in forwards;pointer-events:none}
+@keyframes focusIn{
+  from{opacity:0;transform:translate(-50%,-47%) scale(.94)}
+  to{opacity:1;transform:translate(-50%,-50%) scale(1)}
+}
+@keyframes focusOut{
+  from{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  to{opacity:0;transform:translate(-50%,-50%) scale(.96)}
+}
+
 .chart-card.expanded .chart-body{height:auto;flex:1;min-height:0}
 .chart-card.expanded .chart-body.scroll-y{overflow:hidden}
 .chart-card.expanded #top10-wrap{height:100% !important}
-.chart-card.expanded .pie-flex{height:auto;flex:1;min-height:0;flex-direction:column-reverse;gap:16px}
-.chart-card.expanded .pie-legend-side{flex:0 0 auto;flex-direction:row;flex-wrap:wrap;gap:8px 18px;overflow-y:auto;max-height:28%;justify-content:center}
-.chart-card.expanded .pie-legend-side .legend-item{font-size:13px}
-.chart-card.expanded .pie-canvas-wrap{flex:1;min-height:0;width:100%;max-width:none;max-height:none;height:auto;align-self:stretch;aspect-ratio:auto}
-.chart-card.expanded .pie-center .pc-value{font-size:26px}
-.chart-card.expanded .pie-center .pc-label{font-size:11px}
 .chart-card.expanded table.heatmap{font-size:13px}
 .chart-card.expanded table.heatmap th,.chart-card.expanded table.heatmap td{padding:9px 14px}
-@keyframes focusIn{from{transform:scale(.96);opacity:.6}to{transform:scale(1);opacity:1}}
+
+/* pie focus layout: donut left, legend + small-values column right */
+.chart-card.expanded .pie-flex{
+  height:auto;flex:1;min-height:0;
+  display:grid;grid-template-columns:minmax(0,3fr) minmax(200px,2fr);gap:18px;
+}
+.chart-card.expanded.narrow-focus .pie-flex{
+  grid-template-columns:1fr;grid-template-rows:minmax(140px,1fr) auto;gap:12px;
+}
+.chart-card.expanded .pie-canvas-wrap{
+  width:100%;height:100%;max-width:none;max-height:none;
+  align-self:stretch;justify-self:stretch;
+}
+.chart-card.expanded .pie-side{display:flex;flex-direction:column;min-height:0;min-width:0}
+.chart-card.expanded.narrow-focus .pie-side{max-height:55%}
+.chart-card.expanded .pie-legend-side{flex:1;min-height:0}
+.chart-card.expanded .pie-legend-side .legend-item{font-size:13px}
+.chart-card.expanded .pie-small-values{
+  display:flex;flex-wrap:wrap;align-content:flex-start;gap:6px 8px;
+  margin-top:10px;padding-top:10px;border-top:1px solid var(--border);
+  flex:0 0 auto;max-height:36%;overflow-y:auto;
+}
+.chart-card.expanded .pie-center .pc-value{font-size:26px}
+.chart-card.expanded .pie-center .pc-label{font-size:11px}
 
 /* PIE com legenda lateral */
 .pie-flex{display:flex;gap:12px;height:240px;align-items:stretch}
@@ -114,11 +165,17 @@ textarea:focus{border-color:var(--accent2)}
 .pie-center .pc-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;font-weight:700}
 .pie-center .pc-value{font-size:16px;color:var(--text);font-weight:700;margin:2px 0}
 .pie-center .pc-unit{font-size:8px;color:var(--text3);text-transform:uppercase}
+.pie-side{display:flex;flex-direction:column;flex:1;min-width:0}
 .pie-legend-side{flex:1;min-width:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-right:4px}
 .pie-legend-side .legend-item{font-size:11px}
 .legend-item.clickable{cursor:pointer;user-select:none}
 .legend-item.clickable:hover{color:var(--text)}
 .legend-item.dimmed{opacity:.4}
+.pie-small-values{display:none}
+.pie-chip{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:4px 10px;cursor:pointer;user-select:none}
+.pie-chip:hover{color:var(--text)}
+.pie-chip.dimmed{opacity:.4}
+.pie-chip .legend-dot{width:8px;height:8px}
 
 /* HEATMAP */
 table.heatmap{border-collapse:collapse;font-size:10px;width:100%}
@@ -295,7 +352,10 @@ table.cultivar-table td.name-cell{color:var(--text);font-weight:500}
               <canvas id="pieChart" role="img" aria-label="Gráfico de rosca com participação percentual de cada vendedor">Gráfico de rosca indisponível — participação percentual de cada vendedor.</canvas>
               <div class="pie-center" id="pie-center"></div>
             </div>
-            <div id="pie-legend" class="pie-legend-side"></div>
+            <div class="pie-side">
+              <div id="pie-legend" class="pie-legend-side"></div>
+              <div id="pie-small-values" class="pie-small-values"></div>
+            </div>
           </div>
         </div>
         <div class="chart-card" ondblclick="toggleCardFocus(this)">
@@ -419,6 +479,7 @@ function expandCard(card) {
   ghost.style.height = card.getBoundingClientRect().height + 'px';
   card.parentNode.insertBefore(ghost, card);
 
+  card.classList.remove('closing', 'narrow-focus');
   card.classList.add('expanded');
   document.getElementById('focus-backdrop').classList.add('active');
 
@@ -427,21 +488,40 @@ function expandCard(card) {
   btn.setAttribute('aria-label', 'Fechar modo foco');
   btn.setAttribute('title', 'Fechar');
 
-  focusedCard = { card, ghost };
+  const key = chartKeyForCard(card);
+
+  // Tracks the user resizing the popup (native `resize:both` handle): keeps
+  // the chart canvas in sync and toggles a narrower layout below 640px.
+  // The resize() call is deferred to rAF so the observer never mutates
+  // layout synchronously inside its own callback (which Chrome flags as a
+  // ResizeObserver loop warning).
+  let resizeObserver = null;
+  if (key) {
+    resizeObserver = new ResizeObserver(entries => {
+      const width = entries[0].contentRect.width;
+      card.classList.toggle('narrow-focus', width < 640);
+      requestAnimationFrame(() => {
+        const k = chartKeyForCard(card);
+        if (k && CHARTS[k]) CHARTS[k].resize();
+      });
+    });
+    resizeObserver.observe(card);
+  }
+
+  focusedCard = { card, ghost, resizeObserver };
   btn.focus();
 
   requestAnimationFrame(() => {
-    const key = chartKeyForCard(card);
     if (key) applyFocusChartAdjustments(key, true);
   });
 }
 
 function collapseFocus() {
   if (!focusedCard) return;
-  const { card, ghost } = focusedCard;
+  const { card, ghost, resizeObserver } = focusedCard;
+  const key = chartKeyForCard(card);
 
-  card.classList.remove('expanded');
-  ghost.remove();
+  if (resizeObserver) resizeObserver.disconnect();
   document.getElementById('focus-backdrop').classList.remove('active');
 
   const btn = card.querySelector('.chart-focus-btn');
@@ -449,12 +529,19 @@ function collapseFocus() {
   btn.setAttribute('aria-label', 'Expandir');
   btn.setAttribute('title', 'Expandir');
 
+  // Keep the popup's expanded box during the closing fade (160ms) so it
+  // doesn't snap back to compact sizing mid-animation; strip everything
+  // only once the animation has actually finished.
+  card.classList.add('closing');
   focusedCard = null;
 
-  requestAnimationFrame(() => {
-    const key = chartKeyForCard(card);
-    if (key) applyFocusChartAdjustments(key, false);
-  });
+  setTimeout(() => {
+    card.classList.remove('expanded', 'closing', 'narrow-focus');
+    ghost.remove();
+    requestAnimationFrame(() => {
+      if (key) applyFocusChartAdjustments(key, false);
+    });
+  }, 160);
 }
 
 function toggleVendorExpand(name) {
@@ -725,6 +812,18 @@ function renderCharts(ctx, rows) {
       ${d.name.split(' ')[0]} ${pct(lastTotal ? d.val/lastTotal : 0,1)}
     </span>`;
   }).join('');
+  // "Valores pequenos" — only shown in focus mode (see .pie-small-values CSS),
+  // calling out the same slices whose datalabels are hidden below (< 3%).
+  document.getElementById('pie-small-values').innerHTML = pieData
+    .filter(d => (lastTotal ? d.val/lastTotal : 0) < 0.03)
+    .map(d => {
+      const isDim = pieHighlight && pieHighlight !== d.name;
+      return `
+      <span class="pie-chip${isDim?' dimmed':''}" onclick="togglePieHighlight('${jsStr(d.name)}')">
+        <span class="legend-dot" style="background:${d.color}"></span>
+        ${d.name} — ${pct(lastTotal ? d.val/lastTotal : 0,1).replace('.', ',')} (${fmt(d.val)} sacas)
+      </span>`;
+    }).join('');
   const highlighted = pieHighlight ? pieData.find(d => d.name === pieHighlight) : null;
   document.getElementById('pie-center').innerHTML = highlighted
     ? `<div class="pc-label">${highlighted.name.split(' ')[0]}</div>
