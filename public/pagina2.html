@@ -158,6 +158,7 @@ textarea:focus{border-color:var(--accent2)}
 .chart-card.expanded .pie-center .pc-value{font-size:26px}
 .chart-card.expanded .pie-center .pc-label{font-size:11px}
 
+
 /* PIE com legenda lateral */
 .pie-flex{display:flex;gap:12px;height:240px;align-items:stretch}
 .pie-canvas-wrap{position:relative;width:150px;height:150px;flex-shrink:0;align-self:center}
@@ -187,8 +188,12 @@ table.heatmap th:first-child{z-index:3}
 .heatmap-legend{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:9px;color:var(--text3);flex-shrink:0}
 .heatmap-legend .grad{flex:1;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--red),var(--orange),var(--green))}
 
-/* TABLE */
-.table-wrap{background:var(--surface);border-radius:12px;padding:1.2rem;border:1px solid var(--border);overflow-x:auto}
+/* TABLE — compact, with its own vertical+horizontal scroll so the whole
+   dashboard has a better shot at fitting one screen; max-height scales
+   with the viewport (vh) so it grows on a big TV/monitor and shrinks on
+   a small laptop instead of using a fixed pixel size. */
+.table-wrap{background:var(--surface);border-radius:12px;padding:1.2rem;border:1px solid var(--border);display:flex;flex-direction:column;min-height:0}
+.table-scroll{overflow:auto;max-height:clamp(220px, 52vh, 760px)}
 table{width:100%;border-collapse:collapse;font-size:12px}
 th{padding:8px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap;text-transform:uppercase;letter-spacing:.04em}
 th.sortable{cursor:pointer;user-select:none}
@@ -196,10 +201,16 @@ th.sortable:hover{color:var(--text2)}
 td{padding:8px 10px;color:var(--text);border-bottom:1px solid rgba(30,53,80,.6);white-space:nowrap;font-variant-numeric:tabular-nums}
 tr.total-row td{border-bottom:none;font-weight:700;background:var(--surface2)}
 tr:hover td{background:rgba(255,255,255,.03)}
+#data-table th,#data-table td{padding:6px 8px;font-size:11px}
+#data-table thead th{position:sticky;top:0;z-index:3;background:var(--surface)}
 #data-table th:nth-child(1),#data-table td:nth-child(1){position:sticky;left:0;width:32px;background:var(--surface);z-index:2}
 #data-table th:nth-child(2),#data-table td:nth-child(2){position:sticky;left:32px;background:var(--surface);z-index:2;box-shadow:2px 0 4px rgba(0,0,0,.25)}
 #data-table th:nth-child(1),#data-table th:nth-child(2){z-index:3;background:var(--surface)}
 #data-table tr.total-row td:nth-child(1),#data-table tr.total-row td:nth-child(2){background:var(--surface2)}
+/* the cultivar drill-down row is a single wide <td colspan> — it is NOT a
+   real "column 1/2" and must not inherit the sticky-left freeze above, or
+   it gets stuck mid-scroll and overlaps the frozen header/columns. */
+#data-table tr.cultivar-subrow > td{position:static;left:auto;box-shadow:none}
 .badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500}
 .badge-up{background:rgba(27,175,122,.15);color:var(--green)}
 .badge-down{background:rgba(227,73,72,.15);color:var(--red)}
@@ -321,6 +332,7 @@ table.cultivar-table td.name-cell{color:var(--text);font-weight:500}
       <select class="filter-select" id="vendor-filter" onchange="setVendorFilter(this.value)">
         <option value="">Todos os vendedores</option>
       </select>
+      <select class="filter-select" id="cultivar-filter" onchange="setCultivarFilter(this.value)" style="display:none"></select>
       <select class="filter-select" id="date-filter" onchange="setDateFilter(this.value)"></select>
       <span class="spacer"></span>
       <button class="btn btn-sm btn-primary" onclick="openModal(null)">+ Adicionar vendedor</button>
@@ -370,7 +382,9 @@ table.cultivar-table td.name-cell{color:var(--text);font-weight:500}
 
     <div class="table-wrap">
       <div class="chart-title" style="margin-bottom:12px">Desempenho detalhado dos vendedores</div>
-      <table id="data-table"><thead></thead><tbody></tbody></table>
+      <div class="table-scroll">
+        <table id="data-table"><thead></thead><tbody></tbody></table>
+      </div>
     </div>
 
     <div class="footer-note">
@@ -431,6 +445,7 @@ let CHARTS = {};
 let sortState = null;   // { key, dir }
 let editingIndex = null; // null = adding new vendor
 let activeFilter = '';  // vendor name selected in the top filter, '' = all
+let cultivarFilter = ''; // cultivar name selected in the top filter, '' = all
 let pieHighlight = null; // vendor name isolated in the donut legend
 let dateFilterIdx = null; // index into STATE.dates used as "current", null = latest
 const expandedVendors = new Set();
@@ -560,6 +575,11 @@ function setVendorFilter(name) {
   render();
 }
 
+function setCultivarFilter(name) {
+  cultivarFilter = name;
+  render();
+}
+
 function setDateFilter(idxStr) {
   dateFilterIdx = idxStr === '' ? null : parseInt(idxStr, 10);
   render();
@@ -620,6 +640,7 @@ function showDashboard(dates, rows, updateLabel) {
   STATE = { dates, rows };
   sortState = null;
   activeFilter = '';
+  cultivarFilter = '';
   pieHighlight = null;
   dateFilterIdx = null;
   expandedVendors.clear();
@@ -687,6 +708,24 @@ function renderDateFilterOptions(lastIdx) {
     <option value="${i}" ${i===lastIdx?'selected':''}>${d}${i===dates.length-1?' (mais recente)':''}</option>`).join('');
 }
 
+// Only Thonus-sourced rows carry a .cultivars breakdown; manual CSV/demo
+// data has none, so the filter stays hidden rather than showing an empty,
+// useless dropdown next to the vendor filter.
+function renderCultivarFilterOptions() {
+  const select = document.getElementById('cultivar-filter');
+  const names = new Set();
+  STATE.rows.forEach(r => (r.cultivars || []).forEach(c => names.add(c.name)));
+  if (!names.size) {
+    select.style.display = 'none';
+    select.innerHTML = '';
+    return;
+  }
+  select.style.display = '';
+  const sorted = [...names].sort((a,b) => a.localeCompare(b));
+  select.innerHTML = `<option value="">Todas as cultivares</option>` +
+    sorted.map(n => `<option value="${n.replace(/"/g,'&quot;')}" ${n===cultivarFilter?'selected':''}>${n}</option>`).join('');
+}
+
 function render() {
   const { dates } = STATE;
   const rows = getVisibleRows();
@@ -706,6 +745,7 @@ function render() {
   lastCtx = ctx;
 
   renderVendorFilterOptions();
+  renderCultivarFilterOptions();
   renderDateFilterOptions(lastIdx);
   renderKPIs(ctx, best, avg, growth, rows);
   renderCharts(ctx, rows);
@@ -933,7 +973,8 @@ function renderTable(ctx) {
 
   const withIndex = STATE.rows
     .map((r, i) => ({ r, i }))
-    .filter(x => !activeFilter || x.r.name === activeFilter);
+    .filter(x => !activeFilter || x.r.name === activeFilter)
+    .filter(x => !cultivarFilter || (x.r.cultivars || []).some(c => c.name === cultivarFilter));
   withIndex.sort((a,b) => {
     const va = colValue(a.r, sortState.key, ctx);
     const vb = colValue(b.r, sortState.key, ctx);
@@ -953,7 +994,9 @@ function renderTable(ctx) {
     const arrowColor = diff>0?'var(--green)':diff<0?'var(--red)':'var(--text2)';
     const arrowBg = diff>0?'rgba(34,181,115,.15)':diff<0?'rgba(230,72,63,.15)':'rgba(92,119,150,.15)';
     const hasCultivars = r.cultivars && r.cultivars.length > 0;
-    const expanded = expandedVendors.has(r.name);
+    // A cultivar filter forces the breakdown open (and narrowed to just that
+    // cultivar) so the user doesn't have to click into every vendor by hand.
+    const expanded = expandedVendors.has(r.name) || !!cultivarFilter;
     const nameKey = jsStr(r.name);
     const nameCell = hasCultivars
       ? `<span class="vendor-toggle" onclick="toggleVendorExpand('${nameKey}')"><span class="vendor-chevron">${expanded?'▾':'▸'}</span>${r.name}</span>`
@@ -972,15 +1015,29 @@ function renderTable(ctx) {
       </td>
     </tr>`;
     if (!hasCultivars || !expanded) return mainRow;
-    const cultivarRows = r.cultivars.map(c => `<tr>
+    const visibleCultivars = cultivarFilter ? r.cultivars.filter(c => c.name === cultivarFilter) : r.cultivars;
+    const cultivarRows = visibleCultivars.map(c => {
+      const cLast = c.vals[lastIdx] || 0;
+      const cPrev = c.vals[prevIdx] || 0;
+      const cDiff = cLast - cPrev;
+      const cDiffPct = cPrev ? cDiff / cPrev : 0;
+      const cBc = cDiff>0?'badge-up':cDiff<0?'badge-down':'badge-flat';
+      const cArrow = cDiff>0?'▲':cDiff<0?'▼':'→';
+      // Share of this cultivar within the vendor's own total (not the grand total).
+      const cPart = last ? cLast/last : 0;
+      return `<tr>
         <td class="name-cell">${c.name}</td>
         ${c.vals.slice(0, visibleDates.length).map(v=>`<td>${fmt(v)}</td>`).join('')}
-      </tr>`).join('');
+        <td>${pct(cPart,2)}</td>
+        <td><span class="badge ${cBc}">${cDiff>=0?'+':''}${fmt(cDiff)}</span></td>
+        <td><span class="badge ${cBc}">${cArrow} ${Math.abs(cDiffPct*100).toFixed(2)}%</span></td>
+      </tr>`;
+    }).join('');
     const subRow = `<tr class="cultivar-subrow">
       <td colspan="${colCount}">
-        <div class="cultivar-title">Cultivares — ${r.name}</div>
+        <div class="cultivar-title">${cultivarFilter ? 'Cultivar ' + cultivarFilter : 'Cultivares'} — ${r.name}</div>
         <table class="cultivar-table">
-          <thead><tr><th>Cultivar</th>${visibleDates.map(d=>`<th>${d}</th>`).join('')}</tr></thead>
+          <thead><tr><th>Cultivar</th>${visibleDates.map(d=>`<th>${d}</th>`).join('')}<th>Part. %</th><th>Cresc. Sacas</th><th>Cresc. %</th></tr></thead>
           <tbody>${cultivarRows}</tbody>
         </table>
       </td>
@@ -1070,6 +1127,7 @@ function resetDash() {
   STATE = { dates: [], rows: [] };
   sortState = null;
   activeFilter = '';
+  cultivarFilter = '';
   pieHighlight = null;
   dateFilterIdx = null;
   expandedVendors.clear();
