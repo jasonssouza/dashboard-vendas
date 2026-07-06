@@ -17,8 +17,15 @@
   --gold:#f2b705;--green:#22b573;--red:#e6483f;--orange:#f0791f;
   --radius:8px;
 }
-body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Arial,sans-serif;min-height:100vh}
-#app{max-width:1700px;margin:0 auto;padding:1.2rem 1.5rem}
+/* VIEWPORT-FIT — the whole app fills exactly one screen and only the detail
+   table scrolls internally; see the "@media (max-height:820px)" fallback near
+   the table rules below, which drops back to today's normal page scroll on
+   short screens instead of squeezing the KPI/chart rows. */
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Arial,sans-serif;height:100dvh;overflow:hidden}
+#app{max-width:1700px;margin:0 auto;padding:1.2rem 1.5rem;height:100dvh;display:flex;flex-direction:column}
+.header{flex-shrink:0}
+#dashboard{display:flex;flex-direction:column;flex:1;min-height:0}
+.section-head,.kpi-grid,.compact-panel,.footer-note{flex-shrink:0}
 
 /* HEADER (mais enxuto) */
 .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:10px}
@@ -189,12 +196,11 @@ table.heatmap th:first-child{z-index:3}
 .heatmap-legend{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:9px;color:var(--text3);flex-shrink:0}
 .heatmap-legend .grad{flex:1;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--red),var(--orange),var(--green))}
 
-/* TABLE — compact, with its own vertical+horizontal scroll so the whole
-   dashboard has a better shot at fitting one screen; max-height scales
-   with the viewport (vh) so it grows on a big TV/monitor and shrinks on
-   a small laptop instead of using a fixed pixel size. */
-.table-wrap{background:var(--surface);border-radius:12px;padding:1.2rem;border:1px solid var(--border);display:flex;flex-direction:column;min-height:0}
-.table-scroll{overflow:auto;max-height:clamp(220px, 52vh, 760px)}
+/* TABLE — absorbs whatever height is left in the viewport-fit layout above
+   and scrolls internally (vertical + horizontal); min-height:280px is the
+   escape valve so it never gets squeezed to nothing on a merely-short screen. */
+.table-wrap{background:var(--surface);border-radius:12px;padding:1.2rem;border:1px solid var(--border);display:flex;flex-direction:column;flex:1;min-height:280px}
+.table-scroll{overflow:auto;flex:1;min-height:0}
 table{width:100%;border-collapse:collapse;font-size:12px}
 th{padding:8px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap;text-transform:uppercase;letter-spacing:.04em}
 th.sortable{cursor:pointer;user-select:none}
@@ -220,6 +226,17 @@ tr:hover td{background:rgba(255,255,255,.03)}
 #data-table tr.cultivar-row td:nth-child(1),#data-table tr.cultivar-row td:nth-child(2){background:var(--surface2)}
 tr.cultivar-row td{background:var(--surface2);color:var(--text2);font-size:10px}
 tr.cultivar-row td.name-cell{padding-left:26px;color:var(--text)}
+/* the grand-total row stays pinned to the bottom of the scroll area, same
+   idea as the frozen header/columns, so it's always visible as a reference
+   while scrolling through the vendor rows above it. */
+#data-table tr.total-row td{position:sticky;bottom:0;z-index:2}
+#data-table tr.total-row td:nth-child(1),#data-table tr.total-row td:nth-child(2){z-index:3}
+@media (max-height:820px){
+  body{height:auto;overflow:auto}
+  #app{height:auto}
+  .table-wrap{flex:none}
+  .table-scroll{flex:none;max-height:clamp(220px, 52vh, 760px)}
+}
 .badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500}
 .badge-up{background:rgba(27,175,122,.15);color:var(--green)}
 .badge-down{background:rgba(227,73,72,.15);color:var(--red)}
