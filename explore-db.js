@@ -11,32 +11,28 @@ async function main() {
     connectTimeout: 10000,
   });
 
-  const [cumulative] = await conn.query(
-    `SELECT data, sacaria, safra,
-            SUM(sacaria) OVER (ORDER BY data ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS acumulado
-     FROM vw_bi_cambai
-     WHERE vendedor LIKE '%THIAGO SCHUH%' AND safra = 'Safra 2025-2026'
-     ORDER BY data DESC
-     LIMIT 15`
+  const [byTipo] = await conn.query(
+    `SELECT b.vis_tipo_visita, COUNT(*) AS linhas, SUM(b.sacaria) AS soma
+     FROM vw_bi_cambai b
+     JOIN visita v ON v.vis_id = b.id_crm
+     WHERE b.safra = 'Safra 2025-2026' AND v.vis_cultura = 'SEM.SOJA'
+     GROUP BY b.vis_tipo_visita
+     ORDER BY soma DESC`
   );
-  console.log('Acumulado só na safra 2025-2026 (THIAGO SCHUH):');
-  console.log(JSON.stringify(cumulative, null, 2));
+  console.log('=== Por vis_tipo_visita (cultura=SEM.SOJA) ===');
+  byTipo.forEach(r => console.log(JSON.stringify(r)));
 
-  // Totals per date across last 4 real dates for this vendor, cumulative within current safra
-  const [totalsPerDate] = await conn.query(
-    `SELECT data, SUM(sacaria) OVER (ORDER BY data ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS acumulado
-     FROM (
-       SELECT data, SUM(sacaria) AS sacaria
-       FROM vw_bi_cambai
-       WHERE vendedor LIKE '%THIAGO SCHUH%' AND safra = 'Safra 2025-2026'
-       GROUP BY data
-     ) t
-     ORDER BY data DESC
-     LIMIT 10`
+  const [combo] = await conn.query(
+    `SELECT b.vis_situacao, b.vis_tipo_visita, COUNT(*) AS linhas, SUM(b.sacaria) AS soma
+     FROM vw_bi_cambai b
+     JOIN visita v ON v.vis_id = b.id_crm
+     WHERE b.safra = 'Safra 2025-2026' AND v.vis_cultura = 'SEM.SOJA'
+     GROUP BY b.vis_situacao, b.vis_tipo_visita
+     ORDER BY soma DESC`
   );
-  console.log('\nAcumulado por data (agrupado, safra atual):');
+  console.log('\n=== Por vis_situacao + vis_tipo_visita (cultura=SEM.SOJA) ===');
+  combo.forEach(r => console.log(JSON.stringify(r)));
 
-  console.log(JSON.stringify(totalsPerDate, null, 2));
   await conn.end();
 }
 

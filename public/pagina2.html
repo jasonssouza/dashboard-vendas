@@ -874,7 +874,7 @@ function renderCharts(ctx, rows) {
       return `
       <span class="pie-chip${isDim?' dimmed':''}" onclick="togglePieHighlight('${jsStr(d.name)}')">
         <span class="legend-dot" style="background:${d.color}"></span>
-        ${d.name} — ${pct(lastTotal ? d.val/lastTotal : 0,1).replace('.', ',')} (${fmt(d.val)} sacas)
+        ${d.name} - ${pct(lastTotal ? d.val/lastTotal : 0,1).replace('.', ',')} (${fmt(d.val)} sacas)
       </span>`;
     }).join('');
   const highlighted = pieHighlight ? pieData.find(d => d.name === pieHighlight) : null;
