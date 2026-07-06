@@ -116,7 +116,7 @@ async function fetchVendasData(lastN) {
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
 const app = express();
-app.use(express.static(PUBLIC_DIR, { index: 'pagina1.html' }));
+app.use(express.static(PUBLIC_DIR, { index: 'pagina2.html' }));
 
 app.get('/pagina1', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'pagina1.html')));
 app.get('/pagina2', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'pagina2.html')));
