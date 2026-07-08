@@ -10,10 +10,10 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0a1526;--surface:#0f2038;--surface2:#0a1830;--surface3:#15294a;
+  --bg:#00123E;--surface:#0f2038;--surface2:#0a1830;--surface3:#046cfc;
   --border:#1c3454;--border2:#28466e;
-  --text:#eef3fa;--text2:#8fa8c7;--text3:#5c7796;
-  --accent:#2f7dd1;--accent2:#3f93ea;
+  --text:#eef3fa;--text2:#8fa8c7;--text3:#677e99;
+  --accent:#046cfc;--accent2:#3f93ea;
   --gold:#f2b705;--green:#22b573;--red:#e6483f;--orange:#f0791f;
   --radius:8px;
 }
@@ -26,8 +26,20 @@
    something we didn't anticipate makes content taller than 100dvh (125%
    browser zoom, Windows large-text scaling, a future extra KPI card), the
    page scrolls instead of silently clipping content with no way to see it. */
-body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Arial,sans-serif;height:100dvh;overflow:auto}
-#app{max-width:1700px;margin:0 auto;padding:1.2rem 1.5rem;height:100dvh;display:flex;flex-direction:column}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Arial,sans-serif;height:100dvh;overflow:auto;position:relative}
+/* WATERMARK — subtle tiled logo, letterhead-style, sitting behind all content. */
+body::before{
+  content:'';
+  position:fixed; inset:0;
+  z-index:0;
+  pointer-events:none;
+  background-image:url('logo.png');
+  background-size:300px auto;
+  background-repeat:space;
+  opacity:.08;
+  transform:rotate(-8deg) scale(1.15);
+}
+#app{max-width:1700px;margin:0 auto;padding:1.2rem 1.5rem;height:100dvh;display:flex;flex-direction:column;position:relative;z-index:1}
 .header{flex-shrink:0}
 #dashboard{display:flex;flex-direction:column;flex:1;min-height:0}
 .section-head,.kpi-grid,.compact-panel,.footer-note{flex-shrink:0}
@@ -104,7 +116,12 @@ textarea:focus{border-color:var(--accent2)}
 .chart-focus-btn:hover{color:var(--text);border-color:var(--accent2)}
 .chart-focus-btn:focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
 .chart-card-ghost{visibility:hidden}
-.focus-backdrop{position:fixed;inset:0;background:rgba(6,12,20,.55);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);z-index:199;opacity:0;pointer-events:none;transition:opacity .2s}
+/* No backdrop-filter here on purpose: stacking this blur with the expanded
+   card's own backdrop-filter (below) makes Chromium leak the blur into the
+   card's own content, blurring its text/numbers too — not just the dimmed
+   background behind it. The card's own 12px blur already gives it a frosted
+   look, so this layer only needs the darkening tint. */
+.focus-backdrop{position:fixed;inset:0;background:rgba(6,12,20,.72);z-index:199;opacity:0;pointer-events:none;transition:opacity .2s}
 .focus-backdrop.active{opacity:1;pointer-events:auto}
 
 .chart-card.expanded{
